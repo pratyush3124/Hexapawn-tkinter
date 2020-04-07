@@ -42,12 +42,11 @@ class Hexapawn(Tk):
         
         self.turn('w')
 
-
     def turn(self,side):
         if side == 'w':
             for i in range(3):
                 for j in range(3):
-                    if self.wpieces[i][j] == 1:
+                    if self.wpieces[i][j] >= 1:
                         self.p[i][j].bind("<Button-1>", lambda event, r=i, c=j:self.click(r,c))
                     else:
                         self.p[i][j].bind("<Button-1>", lambda event:self.clear())
@@ -55,7 +54,7 @@ class Hexapawn(Tk):
         if side == 'b':
             for i in range(3):
                 for j in range(3):
-                    if self.bpieces[i][j] == 1:
+                    if self.bpieces[i][j] >= 1:
                         self.p[i][j].bind("<Button-1>", lambda event, r=i, c=j:self.click(r,c))
                     else:
                         self.p[i][j].bind("<Button-1>", lambda event:self.clear())
@@ -78,25 +77,45 @@ class Hexapawn(Tk):
 
     def move(self,fr,fc,tr,tc):
         if self.p[tr][tc]['bg'] == 'yellow':
-            if self.wpieces[fr][fc] == 1:
-                self.p[tr][tc].create_image(60,60,image = self.whitep)
-                self.p[fr][fc].delete(self.wpieces[fr][fc])
-                self.clear()
-                self.board.makemove(fr,fc,tr,tc)
+            if self.wpieces[fr][fc] >= 1:
+                if self.bpieces[tr][tc] >= 1:
+                    self.p[tr][tc].delete(self.bpieces[tr][tc])
+                    self.wpieces[tr][tc] = self.p[tr][tc].create_image(60,60,image = self.whitep)
+                    self.p[fr][fc].delete(self.wpieces[fr][fc])
+                    self.bpieces[tr][tc] = 0
+                else:
+                    self.wpieces[tr][tc] = self.p[tr][tc].create_image(60,60,image = self.whitep)
+                    self.p[fr][fc].delete(self.wpieces[fr][fc])
+                    self.wpieces[fr][fc] = 0
+                self.wpieces[fr][fc] = 0
 
-            elif self.bpieces[fr][fc] == 1:
-                self.p[tr][tc].create_image(60,60,image = self.blackp)
-                self.p[fr][fc].delete(self.bpieces[fr][fc])
                 self.clear()
                 self.board.makemove(fr,fc,tr,tc)
+                t = 1
+
+            elif self.bpieces[fr][fc] >= 1:
+                if self.wpieces[tr][tc] >= 1:
+                    self.p[tr][tc].delete(self.wpieces[tr][tc])
+                    self.bpieces[tr][tc] = self.p[tr][tc].create_image(60,60,image = self.blackp)
+                    self.p[fr][fc].delete(self.bpieces[fr][fc])
+                    self.wpieces[tr][tc] = 0
+                else:
+                    self.bpieces[tr][tc] = self.p[tr][tc].create_image(60,60,image = self.blackp)
+                    self.p[fr][fc].delete(self.bpieces[fr][fc])
+                    self.bpieces[fr][fc] = 0
+                self.bpieces[fr][fc] = 0
+
+                self.clear()
+                self.board.makemove(fr,fc,tr,tc)
+                t = 0
 
             for i1 in self.p:
                 for j1 in i1:
                     j1.bind("<Button-1>", lambda event: self.donothing())
 
-            if self.wpieces[fr][fc] == 1:
+            if t:
                 self.turn('b')
-            elif self.bpieces[fr][fc] == 1:
+            else:
                 self.turn('w')
 
         else:
@@ -119,25 +138,26 @@ class Board():
     def showmoves(self,r,c):
         options = []
         if self.board[r][c] == 'w':
-            try:
+            if r-1 in range(3):
                 if self.board[r-1][c] == 0:
                     options.append((r-1,c))
-                if self.board[r-1][c-1] == 'b':
-                    options.append((r-1,c-1))
-                if self.board[r-1][c+1] == 'b':
-                    options.append((r-1,c+1))
-            except:
-                pass
+                if c-1 in range(3):
+                    if self.board[r-1][c-1] == 'b':
+                        options.append((r-1,c-1))
+                if c+1 in range(3):
+                    if self.board[r-1][c+1] == 'b':
+                        options.append((r-1,c+1))
+
         if self.board[r][c] == 'b':
-            try:
+            if r+1 in range(3):
                 if self.board[r+1][c] == 0:
                     options.append((r+1,c))
-                if self.board[r+1][c-1] == 'w':
-                    options.append((r+1,c-1))
-                if self.board[r+1][c+1] == 'w':
-                    options.append((r+1,c+1))
-            except:
-                pass
+                if c-1 in range(3):
+                    if self.board[r+1][c-1] == 'w':
+                        options.append((r+1,c-1))
+                if c+1 in range(3):
+                    if self.board[r+1][c+1] == 'w':
+                        options.append((r+1,c+1))
         return options
 
     def makemove(self,fr,fc,tr,tc):
