@@ -1,5 +1,5 @@
-from tkinter import Canvas,Tk,PhotoImage, Frame
-
+from tkinter import Canvas, Tk, PhotoImage, Frame, messagebox
+ 
 class Hexapawn(Tk):
     def __init__(self):
         Tk.__init__(self)
@@ -8,7 +8,7 @@ class Hexapawn(Tk):
         self.configure(background = 'black')
 
         self.frame = Frame(self,bg = 'red')
-        
+
         self.p = [0]*3
 
         self.board = Board()
@@ -23,13 +23,13 @@ class Hexapawn(Tk):
             self.bpieces[i] = [0]*3
             for j in range(3):
                 if i == j or i+j == 2:
-                    self.p[i][j] = Canvas(self.frame, bg = 'gray', height = 120, width = 120)
+                    self.p[i][j] = Canvas(self.frame, bg = '#696969', height = 120, width = 120)
                 else:
-                    self.p[i][j] = Canvas(self.frame, bg = 'white', height = 120, width = 120)
+                    self.p[i][j] = Canvas(self.frame, bg = '#DCDCDC', height = 120, width = 120)
                 self.p[i][j].grid(row = i, column = j)
 
-        self.whitep = PhotoImage(file = 'C:\\Users\\talk2\\OneDrive\\Desktop\\Python\\hexapawn\\whitepawn1.png')
-        self.blackp = PhotoImage(file = 'C:\\Users\\talk2\\OneDrive\\Desktop\\Python\\hexapawn\\blackpawn1.png')
+        self.blackp = PhotoImage(file = '.\\blackpawn1.png')
+        self.whitep = PhotoImage(file = '.\\whitepawn1.png')
 
         self.frame.pack()
 
@@ -39,11 +39,11 @@ class Hexapawn(Tk):
         for i in range(3):
             self.wpieces[2][i] = self.p[2][i].create_image(60,60,image = self.whitep)
 
-        
-        self.turn('w')
+        self.wturn = 'w'
+        self.turn()
 
-    def turn(self,side):
-        if side == 'w':
+    def turn(self):
+        if self.wturn == 'w':
             for i in range(3):
                 for j in range(3):
                     if self.wpieces[i][j] >= 1:
@@ -51,7 +51,7 @@ class Hexapawn(Tk):
                     else:
                         self.p[i][j].bind("<Button-1>", lambda event:self.clear())
 
-        if side == 'b':
+        if self.wturn == 'b':
             for i in range(3):
                 for j in range(3):
                     if self.bpieces[i][j] >= 1:
@@ -63,20 +63,19 @@ class Hexapawn(Tk):
         for i in range(3):
             for j in range(3):
                 if i == j or i+j == 2:
-                    self.p[i][j]['bg'] = 'gray'
+                    self.p[i][j]['bg'] = '#696969'
                 else:
-                    self.p[i][j]['bg'] = 'white'
+                    self.p[i][j]['bg'] = '#DCDCDC'
 
     def click(self,r,c):
         self.clear()
         options = self.board.showmoves(r,c)
         for i in options:
-            self.p[i[0]][i[1]]['bg'] = 'yellow'
+            self.p[i[0]][i[1]]['bg'] = '#ffe12b'
             self.p[i[0]][i[1]].bind("<Button-1>", lambda event, ro=i[0], co=i[1]: self.move(r,c,ro,co))
  
-
     def move(self,fr,fc,tr,tc):
-        if self.p[tr][tc]['bg'] == 'yellow':
+        if self.p[tr][tc]['bg'] == 'yellow' or 'orange':
             if self.wpieces[fr][fc] >= 1:
                 if self.bpieces[tr][tc] >= 1:
                     self.p[tr][tc].delete(self.bpieces[tr][tc])
@@ -114,9 +113,11 @@ class Hexapawn(Tk):
                     j1.bind("<Button-1>", lambda event: self.donothing())
 
             if t:
-                self.turn('b')
+                self.wturn = 'b'
+                self.turn()
             else:
-                self.turn('w')
+                self.wturn = 'w'
+                self.turn()
 
         else:
             self.clear()
@@ -126,7 +127,7 @@ class Hexapawn(Tk):
 
 
 class Board():
-    def __init__(self):
+    def __init__(self):        
         self.board = [0]*3
         for i in range(3):
             self.board[i] = [0]*3
@@ -134,6 +135,8 @@ class Board():
         for i in range(3):
             self.board[0][i] = 'b'
             self.board[2][i] = 'w'
+
+        self.turn = 0
 
     def showmoves(self,r,c):
         options = []
@@ -161,10 +164,43 @@ class Board():
         return options
 
     def makemove(self,fr,fc,tr,tc):
+        self.turn = self.board[fr][fc]
         a = self.board[fr][fc]
         self.board[fr][fc] = 0
         self.board[tr][tc] = a
+        self.checkwin()
+
+    def checkwin(self):
+        if 'w' in self.board[0]:
+            messagebox.showinfo('Game Over','White Wins')
+        elif 'b' in self.board[2]:
+            messagebox.showinfo('Game Over','Black Wins')
+        t = True
+        s = True
+        for i in range(3):
+            if 'b' in self.board[i]:
+                s = False
+            if 'w' in self.board[i]:
+                t = False
+        if t:
+            messagebox.showinfo('Game Over','Black Wins')
+        if s:
+            messagebox.showinfo('Game Over','White Wins')
+
+        if self.turn == 'w':
+            a = 'b'
+        else:
+            a = 'w'
+        t = True
+        for i in range(3):
+            for j in range(3):
+                if self.board[i][j] == a:
+                    if len(self.showmoves(i,j)) > 0:
+                        t = False
+        if t:
+            messagebox.showinfo('Game Over','{} Wins'.format(self.turn))
 
 
-gameone = Hexapawn()
-gameone.mainloop()
+if __name__ == '__main__':
+    gameone = Hexapawn()
+    gameone.mainloop()
