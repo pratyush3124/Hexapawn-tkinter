@@ -6,7 +6,7 @@ class Hexapawn(Tk):
     def __init__(self):
         Tk.__init__(self)
 
-        self.geometry('475x375')
+        self.geometry('450x375')
 
         self.frames = [0]
         self.frames[0] = Grid(self)
@@ -18,6 +18,8 @@ class Hexapawn(Tk):
         self.playagainb.grid(row = 0, column = 1)
 
     def playagain(self):
+        if self.frames[0].won != None:
+            self.ai.feedback(self.frames[0].won,self.frames[0].moveno)
         self.frames.append(Grid(self))
         self.frames[len(self.frames)-1].grid(row = 0, column = 0)
         del self.frames[0]
@@ -27,7 +29,6 @@ class Hexapawn(Tk):
 class Grid(Frame):
     def __init__(self, parent):
         Frame.__init__(self,parent)
-
         self.parent = parent
 
         self.p = [0]*3
@@ -35,10 +36,7 @@ class Grid(Frame):
         self.board = Board(self)
 
         self.pieces = {'w':[0]*3, 'b':[0]*3}
-        # self.wpieces = [0]*3
-        # self.bpieces = [0]*3
 
-        # can = Canvas(self, height = 360, width = 360)
         for i in range(3):
             self.p[i] = [0]*3
             self.pieces['w'][i] = [0]*3
@@ -58,6 +56,7 @@ class Grid(Frame):
             self.pieces['w'][2][i] = self.p[2][i].create_image(60,60,image = self.images['w'])
             self.pieces['b'][0][i] = self.p[0][i].create_image(60,60,image = self.images['b'])
 
+        self.won = None
         self.wturn = 'w'
         self.nturn = 'b'
         self.moveno = 1
@@ -100,6 +99,8 @@ class Grid(Frame):
             for j1 in i1:
                 j1.bind("<Button-1>", lambda event: self.donothing())
 
+        self.parent.ai.note(self.moveno,fr,fc,tr,tc)
+
         b = self.checkwin()
         if b:
             return
@@ -110,8 +111,7 @@ class Grid(Frame):
         self.moveno += 1
 
         if self.wturn == 'b':
-            self.parent.ai.turn()
-            # self.turn()
+            self.parent.ai.turn(self.moveno)
         else:
             self.turn()
 
@@ -121,10 +121,12 @@ class Grid(Frame):
     def checkwin(self):
         if 'w' in self.board.board[0]:
             messagebox.showinfo('Game Over','White Wins')
+            self.won = 'w'
             self.parent.playagain()
             return True
         elif 'b' in self.board.board[2]:
             messagebox.showinfo('Game Over','Black Wins')
+            self.won = 'b'
             self.parent.playagain()
             return True
 
@@ -137,10 +139,12 @@ class Grid(Frame):
                 t = False
         if s:
             messagebox.showinfo('Game Over','White Wins')
+            self.won = 'w'
             self.parent.playagain()
             return True
         if t:
             messagebox.showinfo('Game Over','Black Wins')
+            self.won = 'b'
             self.parent.playagain()
             return True
 
@@ -153,6 +157,7 @@ class Grid(Frame):
                         t = False
         if t:
             messagebox.showinfo('Game Over','{} Wins'.format(self.wturn))
+            self.won = self.wturn
             self.parent.playagain()
             return True
 
@@ -202,32 +207,90 @@ class Board():
         self.board[fr][fc] = 0
         self.board[tr][tc] = a
 
+    def isvalid(self, q):
+        if self.board[q[0]][q[1]] == 'b':
+            return True
+        else:
+            return False
+
 
 class AI():
     def __init__(self,parent):
         self.parent = parent
-        self.hierarchy = {1:None, 3:None, 5:None}
+        self.memory = {1:{(2,0,1,0):[], (2,1,1,1):[], (2,2,1,2):[]}, 3:{}, 5:{}}
+        # self.heirarchy = {(2,0,1,0,{}):[(0,1,1,1,{}),(0,1,1,0,{}),(0,2,1,2,{})],(2,1,1,1,{}):[],(2,2,1,2,{}):[]}
+        self.one = {(2,0,1,0):[], (2,1,1,1):[], (2,2,1,2):[]}
+        self.three = {}
+        self.five = {}
+        # self.current = self.heirarchy
         self.frame = self.parent.frames[len(self.parent.frames)-1]
+        self.notes = {}
 
-    def turn(self):
+    def note(self,no,fr,fc,tr,tc):
+        self.notes[no] = (fr,fc,tr,tc)
+
+    def turn(self,n):
+        m = n-1
+        if m == 1:
+            if self.notes[m] in list(self.one.keys()):
+                if self.one[self.notes[m]] == []:
+                    self.one[self.notes[m]] = self.blackmoves()
+            else:
+                self.one[self.notes[m]] = self.blackmoves()
+            self.randommove(self.one[self.notes[m]])
+        elif m == 3:
+            if (self.notes[1],self.notes[2],self.notes[3]) in list(self.three.keys()):
+                if self.three[(self.notes[1],self.notes[2],self.notes[3])] == []:
+                    self.three[(self.notes[1],self.notes[2],self.notes[3])] = self.blackmoves()
+            else:
+                self.three[(self.notes[1],self.notes[2],self.notes[3])] = self.blackmoves()
+            self.randommove(self.three[(self.notes[1],self.notes[2],self.notes[3])])
+        elif m == 5:
+            if (self.notes[1],self.notes[2],self.notes[3],self.notes[4],self.notes[5]) in list(self.five.keys()):
+                if self.five[(self.notes[1],self.notes[2],self.notes[3],self.notes[4],self.notes[5])] == []:
+                    self.five[(self.notes[1],self.notes[2],self.notes[3],self.notes[4],self.notes[5])] = self.blackmoves()
+            else:
+                self.five[(self.notes[1],self.notes[2],self.notes[3],self.notes[4],self.notes[5])] = self.blackmoves()
+            self.randommove(self.five[(self.notes[1],self.notes[2],self.notes[3],self.notes[4],self.notes[5])])
+
+    def blackmoves(self):
+        a = []
+        possible = self.blacks()
+        for i in possible:
+            s = self.frame.board.showmoves(i[0], i[1])
+            for j in s:
+                a.append((i[0],i[1],j[0],j[1]))
+        return a
+
+    def blacks(self):
         possible = []
         for i in range(3):
             for j in range(3):
                 if self.frame.board.board[i][j] == 'b':
                     possible.append((i,j))
-        subject = random.choice(possible)
-        subjectsoptions = self.frame.board.showmoves(subject[0], subject[1])
-        if subjectsoptions == []:
-            possible.remove(subject)
-            subject = random.choice(possible)
-            subjectsoptions = self.frame.board.showmoves(subject[0], subject[1])
+        return possible
 
-        moved = random.choice(subjectsoptions)
-        self.frame.move(subject[0],subject[1], moved[0], moved[1])
+    def randommove(self, options):
+        s = random.choice(options)
+        self.frame.move(s[0],s[1],s[2],s[3])
+        self.lastmove = (s[0],s[1],s[2],s[3])
+
+    def feedback(self,who,n):
+        if who == 'w':
+            #remove lastmove from self.memory's last moveno's(frame.moveno), self.notes's last moveno
+            # self.memory[self.frame.moveno-2][self.notes[self.frame.moveno-2]].remove(self.lastmove)
+            if n == 3:
+                self.one[(self.notes[1])].remove(self.lastmove)
+            if n == 5:
+                self.three[(self.notes[1],self.notes[2],self.notes[3])].remove(self.lastmove)
+            if n == 7:
+                self.five[(self.notes[1],self.notes[2],self.notes[3],self.notes[4],self.notes[5])].remove(self.lastmove)
+
 
     def refresh(self):
         self.frame = self.parent.frames[len(self.parent.frames)-1]
-
+        self.notes = {}
+        
 
 if __name__ == '__main__':
     gameone = Hexapawn()
