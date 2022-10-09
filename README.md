@@ -1,2 +1,2 @@
 # Hexapawn-tkinter
-A pythn tkinter based gui for the game Hexapawn
+A python tkinter based gui for the game Hexapawn
